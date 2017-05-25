@@ -1,0 +1,160 @@
+<div>
+	<label for="cbox1">Progressive Pong</label>
+	<input type="checkbox" id="cbox1"></input>
+</div>	
+</br>
+<div>
+		<canvas id="canvas" width="640" height="480"></canvas>
+</div>
+<script type="text/javascript">
+
+// Initial Values
+padel1y=padel2y=40;
+padelThickness=10;
+ballX=ballY=50;
+ballD=6;
+padelHeight=100;
+velX=velY=10;
+score1=score2=0;
+counter = 0;
+blocks = [];
+ballprevX = 0;
+ballprevY = 0;
+
+//settings
+aiDifficulty=1;
+randomblocks=1;
+
+	window.onload = function() {
+		canvas=document.getElementById('canvas');
+		cc=canvas.getContext('2d');
+		setInterval(update, 1000/30);
+
+		var viewportOffset = canvas.getBoundingClientRect();
+		var top = viewportOffset.top;
+
+		canvas.addEventListener('mousemove',function(e){
+			padel1y = e.clientY - top - padelHeight/2;
+
+			// Prevent padel from moving off screen.
+			if (padel1y < 0) {padel1y = 0;}
+			if (padel1y + padelHeight > canvas.height) {padel1y = canvas.height - padelHeight;}
+		});
+	}
+
+	function reset() {
+		ballX=canvas.width/2;
+		ballY=canvas.height/2;
+		velX=-velX;
+		counter = 0;
+		blocks = [];
+	}
+
+	function runAI() {
+		move = aiDifficulty * 5;
+		if (padel2y + padelHeight/2	< ballY) {
+			padel2y += move;
+		} else {
+			padel2y -= move;
+		}
+		// Prevent padel from moving off screen.
+			if (padel2y < 0) {padel2y = 0;}
+			if (padel2y + padelHeight > canvas.height) {padel2y = canvas.height - padelHeight;}
+	}
+
+	function addBlocks() {
+		counter = 0;
+		x = Math.floor(Math.floor(Math.random() * canvas.width * ballD) / ballD);
+		y = Math.floor(Math.floor(Math.random() * canvas.height * ballD) / ballD);
+		cc.fillStyle='white';	
+		blocks.push([x,y]);
+	}
+
+	function update() {
+		counter += 1;
+		ballprevX += ballX;
+		ballprevY += ballY;
+		ballX += velX;
+		ballY += velY;
+		if(ballY < 0 && velY < 0){
+			velY=-velY;
+		}
+		if(ballY > canvas.height && velY > 0){
+			velY=-velY;
+		}
+
+		if(ballX < padelThickness){
+			if (ballY>padel1y && ballY<padel1y+padelHeight)
+			{
+				velX=-velX;
+				dy = ballY-(padel1y+padelHeight/2);
+				velY = dy*0.3;
+			} 
+		} 
+
+		if (ballX < 0) {
+			if (ballY>padel1y && ballY<padel1y+padelHeight)
+			{
+				velX=-velX;
+				dy = ballY-(padel1y+padelHeight/2);
+				velY = dy*0.3;
+			} else {
+				score2++;
+				reset();
+			}
+		}
+
+		if(ballX>canvas.width-padelThickness){
+			if (ballY>padel2y && ballY<padel2y+padelHeight)
+			{
+				velX=-velX;
+				dy = ballY-(padel2y+padelHeight/2);
+				velY = dy*0.3;
+			} 
+		}
+
+		if(ballX>canvas.width) {
+			if (ballY>padel2y && ballY<padel2y+padelHeight)
+			{
+				velX=-velX;
+				dy = ballY-(padel2y+padelHeight/2);
+				velY = dy*0.3;
+			} else {
+				score1++;
+				reset();
+			}
+		}
+
+		if (document.getElementById("cbox1").checked == 1) {
+			if (counter > 5) {
+				addBlocks();
+			}
+			blocks.forEach(function(element, index, array){
+				if (ballX > element[0] - ballD && ballX < element[0] + ballD
+					&& ballY > element[1] - ballD && ballY < element[1] + ballD) {
+						if (Math.abs(ballX - ballprevX) > Math.abs(ballY - ballprevY) ){
+							velX =- velX;
+						} else {
+							velY =- velY;
+						}
+				}
+			});
+		}
+
+		runAI();
+
+		cc.fillStyle = 'black';
+		cc.fillRect(0,0,canvas.width,canvas.height);
+		cc.fillStyle='white';
+		cc.fillRect(0,padel1y,padelThickness,padelHeight);
+		cc.fillRect(canvas.width-padelThickness,padel2y,padelThickness,padelHeight);
+		cc.fillRect(ballX-ballD/2,ballY-ballD/2,ballD,ballD);
+		blocks.forEach(function(element, index, array){
+			cc.fillRect(element[0]-ballD/2,element[1]-ballD/2,ballD,ballD);
+		});
+		cc.fillStyle='red';
+		cc.fillText(score1,100,100);
+		cc.fillText(score2,canvas.width-100,100);
+	}
+
+</script>	

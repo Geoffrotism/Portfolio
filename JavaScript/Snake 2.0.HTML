@@ -1,0 +1,125 @@
+<div>
+	<label for="scoreTxt">Score</label>
+	<label id="scoreTxt">0</label>
+</div>	
+
+<canvas id="canvas" width="500" height="500"></canvas>
+<script>
+	
+	window.onload = function() {
+		diameter = 10;
+		snakeLength = 1;
+		snake = [[250,250]];
+		food = [400, 250];
+		velocityX = 1;
+		velocityY = 0;
+		score = 0;
+ 
+		canvas=document.getElementById('canvas');
+		cc=canvas.getContext('2d');
+		refreshId = setInterval(update, 120);
+
+		//User Input
+		window.onkeyup = function(e) {
+			var key = e.keyCode ? e.keyCode : e.which;
+			switch (key) {
+				// Down
+				case 40:
+					if (velocityY != -1) {
+						velocityX = 0;
+						velocityY = 1;
+					}
+				break;
+				// Up
+				case 38:
+					if (velocityY != 1) {
+						velocityX = 0;
+						velocityY = -1;
+					}
+				break;
+				// Left
+				case 37:
+					if (velocityX != 1) {
+						velocityY = 0;
+						velocityX = -1;
+					}
+				break;
+				// Right
+				case 39:
+				    if (velocityX != -1) {
+				    	velocityY = 0;
+				      	velocityX = 1;
+				    }
+		      	break;
+		      	default:
+		      		return;
+			}
+		}
+	}
+
+	function eat(){
+		food = createFood();
+
+		score ++;
+		document.getElementById("scoreTxt").innerHTML = score;
+	}
+
+	// Losing the game.
+	function checkCollision(x, y){
+		//sides of map
+		if (x < 0 || x >= canvas.width) {
+			clearInterval(refreshId);
+			return false;
+		}
+		//top and bottom of map
+		if (y < 0 || y >= canvas.height) {
+			clearInterval(refreshId);
+			return false;
+		}
+		//check if colliding with tail.
+		snake.slice(1).forEach(function(element) {
+			if (x == element[0] && y == element[1]) {
+				clearInterval(refreshId);
+				return false;
+			}
+		});
+		return true;
+	}
+
+	function createFood(){
+		return [Math.floor(Math.random() * canvas.width / diameter) * diameter, Math.floor(Math.random() * canvas.height / diameter) * diameter];
+	}
+
+	function update(){
+		x = snake[0][0] + (velocityX * diameter);
+		y = snake[0][1] + (velocityY * diameter);
+
+		if(checkCollision(x, y)){
+			lastX = snake[snake.length - 1][0];
+			lastY = snake[snake.length - 1][1];
+
+			// Start process of moving the tail forward.
+			snake.pop();
+			snake.reverse();
+
+			//Finish moving the tail forward.
+			snake.push([x,y]);
+			snake.reverse();
+
+			// Eat food.
+			if (x == food[0] && y == food[1]){
+				eat();
+				snake.push([lastX,lastY]);
+			}
+
+			cc.fillStyle = 'black';
+			cc.fillRect(0,0,canvas.width,canvas.height);
+			cc.fillStyle='white';
+			cc.fillRect(food[0], food[1], diameter, diameter);
+			snake.forEach(function(element) {
+				cc.fillRect(element[0],element[1],diameter,diameter);
+			});
+		}
+	}
+
+</script>

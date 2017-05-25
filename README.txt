@@ -1,0 +1,1 @@
+These are personal projects that I have done to help test and expand my knowledge of various technologies.

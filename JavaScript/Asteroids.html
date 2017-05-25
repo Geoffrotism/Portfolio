@@ -1,0 +1,315 @@
+<div>
+	<label for="livesTxt">Lives</label>
+	<label id="livesTxt">2</label>
+</div>	
+<div>
+	<label for="scoreTxt">Score</label>
+	<label id="scoreTxt">0</label>
+</div>	
+<canvas id="canvas" width="500" height="500"></canvas>
+<script>
+window.onload = function() {
+	ship = new Ship();
+	asteroids = [new Asteroid(2, 0, 0, 0, 0)]; // Collection of all the asteroids as well as creating the first one when the game loads.
+	bullets = []; // Collection of all the bullets. 
+	lastFired = 0; // Used to prevent infinite bullet spam.
+	lives = 2; 
+	score = 0;
+	level = 1; // Current level. Determines difficulty.
+	asteroidRad = 10; //arbitrary factor to control radius of asteroids.
+	maxAsteroidSize = 5; // increments of 1;
+
+	canvas=document.getElementById('canvas');
+	ctx=canvas.getContext('2d');
+	refreshId = setInterval(update, 30);
+
+	//User Input
+	var map = {32: false, 37: false, 38: false, 39: false, 40: false}; // mapping to allow multiple keys to be pressed simultaneously.
+	window.onkeydown = onkeyup = function(e) {
+		var key = e.keyCode ? e.keyCode : e.which;
+		map[key] = e.type == 'keydown';
+
+		// Down + Left
+		if (map[40] && map[37])	{
+			ship.velocityX += -1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += -1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+			ship.rotation -= 5;
+		}
+		// Down + Right
+		else if (map[40] && map[39])	{
+			ship.velocityX += -1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += -1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+			 ship.rotation += 5;
+		}
+		// Up + Left
+		else if (map[38] && map[37]) {
+			ship.velocityX += 1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += 1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+			ship.rotation -= 5;
+		}
+		// Up + Right
+		else if (map[38] && map[39]) {
+			ship.velocityX += 1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += 1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+			ship.rotation += 5;
+		}
+		// Down
+		else if (map[40]) {
+			ship.velocityX += -1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += -1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+		}
+		// Up
+		else if (map[38]) {
+			ship.velocityX += 1.2 * Math.cos(ship.rotation * Math.PI/ 180);
+			ship.velocityY += 1.2 * Math.sin(ship.rotation * Math.PI/ 180);
+		}
+		// Left
+		else if (map[37]) {
+			ship.rotation -= 8;
+		}
+		// Right
+		else if (map[39]) {
+		    ship.rotation += 8;
+		}
+		// Spacebar
+		if (map[32]) {
+			if (lastFired < 1) {			
+				bullets.push(new Bullet());
+				lastFired = 10;
+			}
+		}
+	};
+}
+
+function Asteroid(size, x, y, velocityX, velocityY) {
+	this.size = size;
+	velX = Math.floor(Math.random()*7) * (1/size);
+	velY = Math.floor(Math.random()*7) * (1/size);
+	velX = velX * (Math.random() < 0.5 ? -1 : 1); //Used to randomize positive/negative direction.	
+	velY = velY * (Math.random() < 0.5 ? -1 : 1); //Used to randomize positive/negative direction.
+
+	// Asteroids with velocity 0 X will be NEW asteroids, else split it off from the previous one.
+	if (velocityX == 0) {
+		this.X = canvas.width/2;
+		this.Y = canvas.height/2;
+
+		// Prevent asteroids from spawning on the ship
+		while(this.X > ship.X - 20 && this.X < ship.X + 20) {
+			this.X = Math.floor(Math.random() * canvas.width);
+		}
+		while(this.Y > ship.Y - 20 && this.Y < ship.Y + 20) {
+			this.Y = Math.floor(Math.random() * canvas.height);
+		}
+		
+		this.velocityX = velX;	
+		this.velocityY = velY;
+	} else {
+		this.X = x;
+		this.Y = y;
+		
+		this.velocityX = velocityX + (velX/5);
+		this.velocityY = velocityY + (velY/5);
+	}
+
+	if (size > 2) {
+		this.health = 2;
+	} else {
+		this.health = 1;
+	}
+}
+
+// Damages the asteroid.
+Asteroid.prototype.hurt = function() {
+	score += 1;
+	document.getElementById('scoreTxt').innerHTML = score;
+	this.health -= 1;
+	if (this.health < 1) {
+		asteroids.splice(asteroids.findIndex(x => x == this), 1);
+		if (this.size > 1) {
+			asteroids.push(new Asteroid((this.size - 1), this.X, this.Y, this.velocityX, this.velocityY));
+			asteroids.push(new Asteroid((this.size - 1), this.X, this.Y, this.velocityX, this.velocityY));
+		}
+	}
+}
+
+function Ship() {
+	this.width = 10;
+	this.height = 15;
+	this.X = 250;
+	this.Y = 250;
+
+	// the direction the ship is pointed.
+	this.rotation = 45;
+
+	this.velocityX = 0;
+	this.velocityY = 0;
+
+	// The points of the triangle that represents the ship. 
+	x = this.X + this.height * Math.cos(this.rotation * Math.PI/ 180);
+	y = this.Y + this.height * Math.sin(this.rotation * Math.PI/ 180);
+	this.point1 = [x,y];
+
+	x = this.X - this.width * Math.cos((this.rotation - 90) * Math.PI/ 180);
+	y = this.Y - this.width * Math.sin((this.rotation - 90) * Math.PI/ 180);
+    this.point2 = [x,y];
+
+    x = this.X - this.width * Math.cos((this.rotation + 90) * Math.PI/ 180);
+	y = this.Y - this.width * Math.sin((this.rotation + 90) * Math.PI/ 180);
+    this.point3 = [x,y];
+}
+
+// Damages the ship.
+Ship.prototype.hurt = function() {
+	lives -= 1;
+	document.getElementById("livesTxt").innerHTML = lives;
+
+	if (lives < 1) {
+		clearInterval(refreshId);
+		ctx.fillStyle = "white";
+		ctx.font = "30px Arial";
+		ctx.fillText("GAME OVER",canvas.width * .35,canvas.height/2);
+	} else {
+		ship = new Ship();
+	}
+}
+
+function Bullet() {
+	var bulletSpeed = 6; // bullet speed factor.
+	this.distance = 700; // How far the bullet can travel before it dissipates.
+
+	this.X = ship.point1[0];
+	this.Y = ship.point1[1];
+
+	this.velocityX = Math.cos(ship.rotation * Math.PI/ 180) * bulletSpeed;
+	this.velocityY = Math.sin(ship.rotation * Math.PI/ 180) * bulletSpeed;
+}
+
+function overflow(thing) {
+	if (thing.X < 0) {
+		thing.X = canvas.width;
+	} 
+	if (thing.X > canvas.width) {
+		thing.X = 0;
+	} 
+	if (thing.Y < 0) {
+		thing.Y = canvas.height;
+	} 
+	if (thing.Y > canvas.height) {
+		thing.Y = 0;
+	} 
+}
+
+function drawShip(){
+	ship.X += ship.velocityX;
+	ship.Y += ship.velocityY;
+
+	overflow(ship);
+
+
+	ship.velocityX = ship.velocityX / 1.02;
+	ship.velocityY = ship.velocityY / 1.02;
+
+	x = ship.X + ship.height * Math.cos(ship.rotation * Math.PI/ 180);
+	y = ship.Y + ship.height * Math.sin(ship.rotation * Math.PI/ 180);
+	ship.point1 = [x,y];
+
+	x = ship.X - ship.width * Math.cos((ship.rotation - 90) * Math.PI/ 180);
+	y = ship.Y - ship.width * Math.sin((ship.rotation - 90) * Math.PI/ 180);
+    ship.point2 = [x,y];
+
+    x = ship.X - ship.width * Math.cos((ship.rotation + 90) * Math.PI/ 180);
+	y = ship.Y - ship.width * Math.sin((ship.rotation + 90) * Math.PI/ 180);
+    ship.point3 = [x,y];
+    
+	// Draw the triangle representation of the ship.
+    ctx.beginPath();
+    ctx.moveTo(ship.point1[0], ship.point1[1]);
+    ctx.lineTo(ship.point2[0], ship.point2[1]);
+    ctx.lineTo(ship.point3[0], ship.point3[1]);
+    ctx.fill();
+}
+
+// This is a seperate function because we might want to change how asteroids look/behave in the future.
+function drawAsteroids() {
+	asteroids.forEach(function(el) {
+		el.X += el.velocityX;
+		el.Y += el.velocityY;
+
+		overflow(el);
+
+		ctx.beginPath();
+		ctx.arc(el.X,el.Y,el.size * asteroidRad,0,2*Math.PI);
+		ctx.fill();
+	});
+}
+
+function drawBullets() {
+	bullets.forEach(function(bullet) {
+		bullet.X += bullet.velocityX;
+		bullet.Y += bullet.velocityY;
+
+		bullet.distance -= Math.abs(bullet.velocityX) + Math.abs(bullet.velocityY);
+
+		if (bullet.distance < 0 ) {
+			bullets.splice(bullets.findIndex(function(element){return element == bullet;}), 1);
+		}
+
+		overflow(bullet);
+
+		ctx.beginPath();
+		ctx.arc(bullet.X, bullet.Y, 3, 0, 2 * Math.PI);
+		ctx.fill();
+	});
+}
+
+function checkCollision() {
+	asteroids.forEach(function(el) {
+		var distance = el.size * asteroidRad;
+		if ((Math.abs(ship.point1[0] - el.X) <= distance && Math.abs(ship.point1[1] - el.Y) <= distance)
+			|| (Math.abs(ship.point2[0] - el.X) <= distance && Math.abs(ship.point2[1] - el.Y) <= distance)
+			|| (Math.abs(ship.point3[0] - el.X) <= distance && Math.abs(ship.point3[1] - el.Y) <= distance)) {
+				console.log("ship hit");
+				ship.hurt();
+		}
+
+		bullets.forEach(function(bullet){
+			if (Math.abs(bullet.X - el.X) <= distance && Math.abs(bullet.Y - el.Y) <= distance) {
+				console.log('hit asteroid');
+				el.hurt();
+				bullets.splice(bullets.findIndex(function(element){return element == bullet;}), 1);
+			}
+		});
+	});
+}
+
+function update() {
+	// Black Background.
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0,0,canvas.width,canvas.height);
+
+	// All other objects are white for now.
+	ctx.fillStyle = 'white';
+	drawShip();
+	drawAsteroids();
+	drawBullets();
+	checkCollision();
+
+	if (lastFired > 0) {
+		lastFired -= 1;
+	}
+
+	if (asteroids.length == 0) {
+		level += 1; // Next level
+
+		// Create new asteroids based on level.
+		var ii = 1;
+		while (ii < level) {
+			value = Math.floor((Math.random() * level) + 1);
+			randomSize = (value < maxAsteroidSize ? value : maxAsteroidSize);
+			asteroids.push(new Asteroid(randomSize, 0, 0, 0, 0));
+			ii++;
+		}
+	}
+}
+
+</script>

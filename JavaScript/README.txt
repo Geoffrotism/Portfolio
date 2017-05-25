@@ -1,0 +1,1 @@
+These projects were written almost exclusively in Javascript (some code is done through HTML for aethetics and to not clutter space).
